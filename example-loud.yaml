@@ -1,0 +1,20 @@
+substitutions:
+  name: loud1
+  friendly_name: My New Esparagus Loud
+  destination_player: media_player.ha_name
+
+packages:
+  loud: !include
+    file: "packages/esparagus-loud.yml"
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "CHANGEME"
+
+ota:
+  - platform: esphome
+    password: "changeme"
+
+wifi:
+  # needs setting

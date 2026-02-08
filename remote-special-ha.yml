@@ -1,0 +1,48 @@
+alias: Play radio from remote trigger
+description: "When this event is received, look up in Music Assistant favourites for the first radio match and play it"
+triggers:
+  - trigger: event
+    event_type: esphome.remote_special
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.button == '1' }}"
+        sequence:
+          - variables:
+              track_name: aaa
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.button == '2' }}"
+        sequence:
+          - variables:
+              track_name: bbb
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.button == '3' }}"
+        sequence:
+          - variables:
+              track_name: ccc
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.button == '4' }}"
+        sequence:
+          - variables:
+              track_name: ddd
+  - action: music_assistant.get_library
+    data:
+      config_entry_id: xxx
+      media_type: radio
+      favorite: true
+      search: "{{ track_name }}"
+      limit: 1
+    response_variable: track
+    enabled: true
+  - action: music_assistant.play_media
+    data:
+      enqueue: replace
+      media_id: "{{ track['items'][0].uri }}"
+    target:
+      entity_id: "{{ trigger.event.data.entity }}"
+mode: single

@@ -1,0 +1,308 @@
+defaults:
+  task_stack_in_psram: "false" # important to disable this for non-S3 model
+  log_level: INFO
+  enable_display: false
+  enable_debug: false
+
+substitutions:
+  pkg_display: !include
+    file: "./esparagus-display.yml"
+    vars:
+      display_cs: GPIO5
+      display_dc: GPIO04
+      display_reset: GPIO32
+      speaker_id: external_media_player
+
+  pkg_debug: !include
+    file: "./debug.yml"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Esparagus Loud
+  min_version: 2025.12.2
+  project:
+    name: "sonocotta.esparagus_loud"
+    version: "1.0.0"
+  name_add_mac_suffix: false
+  platformio_options:
+    board_build.flash_mode: dio
+
+packages:
+  remote: !include
+    file: "./esparagus-remote.yml"
+    vars:
+      gpio_pin: 39
+      led_id: rgb_front_led
+  display: ${ pkg_display if enable_display else {} }
+  debug: ${ pkg_debug if enable_debug else {} }
+
+logger:
+  level: ${log_level}
+
+esp32:
+  board: mhetesp32minikit
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    version: recommended
+    advanced:
+      minimum_chip_revision: "3.1" 
+    sdkconfig_options:
+      CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST: "y"
+      CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY: "y"
+
+      CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      CONFIG_MBEDTLS_SSL_PROTO_TLS1_3: "y"  # TLS1.3 support isn't enabled by default in IDF 5.1.5
+
+http_request:
+
+wifi:
+  # Max power for a more stable connection
+  power_save_mode: none
+
+api:
+  on_client_connected: 
+    then:
+      - script.execute: success_light
+
+script:
+  - id: success_light
+    then:
+      - repeat:
+          count: 5
+          then:
+            - light.turn_on:
+                id: rgb_front_led
+                blue: 0%
+                red: 0%
+                green: 100%
+                brightness: 50%
+            - delay: 1s
+            - light.turn_off: rgb_front_led
+            - delay: 1s
+
+captive_portal:
+
+globals:
+  - id: current_volume
+    type: float
+    initial_value: '0.2'
+  - id: announcement_triggered
+    type: bool
+    initial_value: 'false'
+
+psram:
+  speed: 80MHz
+  ignore_not_found: false
+
+external_components:
+  - source: github://pr#12253
+    components: [mixer]
+    refresh: 1h
+
+  - source: github://pr#12254
+    components: [resampler]
+    refresh: 1h
+
+  - source: # github://pr#12256
+      type: git
+      url: https://github.com/esphome/esphome
+      ref: 9148832ea4e54907bad71a24d4ced1ce6c862433
+    components: [audio]
+    # refresh: 1h
+
+  - source: github://pr#12258
+    components: [media_player]
+    refresh: 1h
+
+  - source: github://pr#12284
+    components: [mdns, sendspin]
+    refresh: 1h
+
+  - source: github://pr#12429
+    components: [file, http_request, media_source, speaker_source]
+    refresh: 0s
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO25
+  i2s_bclk_pin: GPIO26
+
+speaker:
+  - platform: i2s_audio
+    id: i2s_speaker_id
+    sample_rate: 48000
+    i2s_dout_pin: GPIO22
+    bits_per_sample: 16bit
+    dac_type: external
+    channel: ${channel_mode}
+    timeout: never
+    buffer_duration: 200ms
+    mclk_multiple: 384
+    use_apll: true
+
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: i2s_speaker_id
+    num_channels: 2
+    task_stack_in_psram: ${task_stack_in_psram}
+    source_speakers:
+      - id: announcement_mixer_input
+        timeout: never
+      - id: media_mixer_input
+        timeout: never
+
+  - platform: resampler
+    id: media_resampling_speaker
+    output_speaker: media_mixer_input
+    sample_rate: 48000
+    bits_per_sample: 16
+
+  - platform: resampler
+    id: announcement_resampling_speaker
+    output_speaker: announcement_mixer_input
+    sample_rate: 48000
+    bits_per_sample: 16
+
+sendspin:
+  id: sendspin_hub
+  task_stack_in_psram: ${task_stack_in_psram}
+  kalman_process_error: 0.01
+
+media_source:
+  - platform: sendspin
+    id: sendspin_source
+  - platform: http_request
+    id: http_source
+    buffer_size: 200000
+
+media_player:
+  - platform: sendspin
+    id: sendspin_group_media_player
+
+  - platform: speaker_source
+    id: external_media_player
+    volume_increment: 3%
+    volume_initial: 50%
+    name: "${friendly_name} Player"
+    announcement_speaker: announcement_resampling_speaker
+    media_speaker: media_resampling_speaker
+    announcement_pipeline:
+      format: FLAC     # FLAC is the least processor intensive codec
+      num_channels: 1  # Stereo audio is unnecessary for announcements
+      sample_rate: 48000
+    media_pipeline:
+      format: FLAC     # FLAC is the least processor intensive codec
+      num_channels: 2
+      sample_rate: 48000
+    sources:
+      - http_source
+      - sendspin_source
+
+    on_play:
+      - if:
+          condition:
+            switch.is_off: enable_dac
+          then:
+            switch.turn_on: enable_dac
+
+    on_idle:
+      - if:
+          condition:
+            switch.is_on: enable_dac
+          then:
+            switch.turn_off: enable_dac
+
+    on_announcement:
+      - if:
+          condition:
+            switch.is_off: enable_dac
+          then:
+            switch.turn_on: enable_dac
+      - if:
+          condition:
+            - lambda: return (!id(announcement_triggered));
+          then:
+            - lambda: |-
+                id(announcement_triggered) = true;
+                id(current_volume) = id(external_media_player).volume;
+            - light.turn_on:
+                id: rgb_front_led
+                blue: 100%
+                red: 0%
+                green: 100%
+                brightness: 50%
+            - mixer_speaker.apply_ducking:
+                  id: media_mixer_input
+                  decibel_reduction: 40
+                  duration: 0.0s
+            - wait_until:
+                media_player.is_announcing: external_media_player
+            - delay: 0.75s
+            - media_player.volume_set:
+                id: external_media_player
+                volume: !lambda "return id(announce_volume).state / 100.0;"
+            - wait_until:
+                - not:
+                    media_player.is_announcing: external_media_player
+            - mixer_speaker.apply_ducking:
+                      id: media_mixer_input
+                      decibel_reduction: 0
+                      duration: 1.0s
+            - media_player.volume_set:
+                id: external_media_player
+                volume: !lambda "return id(current_volume);"
+            - light.turn_off:
+                id: rgb_front_led
+            - lambda: id(announcement_triggered) = false;
+
+    on_state:
+      if:
+        condition:
+          and:
+            - lambda: return (!id(announcement_triggered));
+            - not:
+                media_player.is_announcing: external_media_player
+        then:
+          - mixer_speaker.apply_ducking:
+              id: media_mixer_input
+              decibel_reduction: 0
+              duration: 1.0s
+
+number:
+  - platform: template
+    name: Announce Volume
+    id: announce_volume
+    icon: mdi:volume-source
+    unit_of_measurement: "%"
+    min_value: 0
+    max_value: 100
+    step: 1
+    restore_value: true
+    initial_value: 50
+    optimistic: true
+
+switch:
+  - platform: gpio
+    icon: "mdi:speaker"
+    name: Enable DAC
+    id: enable_dac
+    pin:
+      number: GPIO13
+    restore_mode: ALWAYS_OFF
+
+### RGB light config
+light:
+  - platform: esp32_rmt_led_strip
+    id: rgb_front_led
+    name: "${friendly_name} LED"
+    rgb_order: GRB
+    pin: GPIO33
+    num_leds: 1
+    chipset: ws2812
+    default_transition_length: 0s
+    initial_state: 
+      brightness: 30%
+      red: 100%
+      green: 100%
+      blue: 0%
