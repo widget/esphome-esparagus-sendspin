@@ -1,0 +1,112 @@
+
+esp32:
+  board: mhetesp32minikit
+  flash_size: 8MB # loud
+  framework:
+    type: esp-idf
+    version: recommended
+    advanced:
+      minimum_chip_revision: "3.1" 
+    sdkconfig_options:
+      CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST: "y"
+      CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY: "y"
+
+      CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      CONFIG_MBEDTLS_SSL_PROTO_TLS1_3: "y"  # TLS1.3 support isn't enabled by default in IDF 5.1.5
+
+
+external_components:
+  - source: github://pr#12253
+    components: [mixer]
+    refresh: 1h
+
+  - source: github://pr#12254
+    components: [resampler]
+    refresh: 1h
+
+  - source: # github://pr#12256
+      type: git
+      url: https://github.com/esphome/esphome
+      ref: 9148832ea4e54907bad71a24d4ced1ce6c862433
+    components: [audio]
+    # refresh: 1h
+
+  - source: github://pr#12258
+    components: [media_player]
+    refresh: 1h
+
+  - source: github://pr#12284
+    components: [mdns, sendspin]
+    refresh: 1h
+
+  # - source: github://pr#12429
+  #   components: [file, http_request, media_source, speaker_source]
+  #   refresh: 0s
+  - source:
+      type: git
+      url: https://github.com/esphome/esphome
+      ref: 4632cf873920bbe69af365e1e79b3f59a02b509f
+    components: [file, http_request, media_source, speaker_source]
+
+psram:
+  speed: 80MHz
+  ignore_not_found: false
+
+http_request:
+
+wifi:
+  # Max power for a more stable connection
+  power_save_mode: none
+  # Don't roam, there's only one BSSID
+  post_connect_roaming: false
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: rgb_front_led
+    name: "${friendly_name} LED"
+    rgb_order: GRB
+    pin: ${led_gpio_pin}
+    num_leds: 1
+    chipset: ws2812
+    default_transition_length: 0s
+    initial_state: 
+      brightness: 30%
+      red: 100%
+      green: 100%
+      blue: 0%
+
+sendspin:
+  id: sendspin_hub
+  task_stack_in_psram: ${task_stack_in_psram}
+  kalman_process_error: 0.01
+
+media_source:
+  - platform: sendspin
+    id: sendspin_source
+  - platform: http_request
+    id: http_source
+    buffer_size: 200000
+
+logger:
+  level: ${log_level}
+
+api:
+  on_client_connected: 
+    then:
+      - script.execute: success_light
+
+script:
+  - id: success_light
+    then:
+      - repeat:
+          count: 5
+          then:
+            - light.turn_on:
+                id: rgb_front_led
+                blue: 0%
+                red: 0%
+                green: 100%
+                brightness: 50%
+            - delay: 1s
+            - light.turn_off: rgb_front_led
+            - delay: 1s
