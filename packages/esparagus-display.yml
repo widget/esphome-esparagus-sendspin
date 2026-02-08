@@ -184,7 +184,7 @@ display:
           it.get_text_bounds(0, 0, 
                             id(ss_title).state.c_str(), 
                             id(text_small), 
-                            TextAlign::LEFT_TOP, 
+                            TextAlign::TOP_LEFT, 
                             &x1, &y1, &new_w, &new_h);
           if (new_w + PADDING_LEFT >= it.get_width()) {
             auto missing_artist_text = new_w - it.get_width();
