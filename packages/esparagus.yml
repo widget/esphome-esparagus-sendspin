@@ -20,16 +20,9 @@ external_components:
     components: [mixer]
     refresh: 1h
 
-  - source: github://pr#12254
-    components: [resampler]
-    refresh: 1h
-
-  - source: # github://pr#12256
-      type: git
-      url: https://github.com/esphome/esphome
-      ref: 9148832ea4e54907bad71a24d4ced1ce6c862433
+  - source: github://pr#12256
     components: [audio]
-    # refresh: 1h
+    refresh: 1h
 
   - source: github://pr#12258
     components: [media_player]
@@ -39,14 +32,9 @@ external_components:
     components: [mdns, sendspin]
     refresh: 1h
 
-  # - source: github://pr#12429
-  #   components: [file, http_request, media_source, speaker_source]
-  #   refresh: 0s
-  - source:
-      type: git
-      url: https://github.com/esphome/esphome
-      ref: 4632cf873920bbe69af365e1e79b3f59a02b509f
+  - source: github://pr#12429
     components: [file, http_request, media_source, speaker_source]
+    refresh: 0s
 
 psram:
   speed: 80MHz

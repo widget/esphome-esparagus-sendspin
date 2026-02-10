@@ -5,6 +5,8 @@ I've been playing a lot with the Sonocotta [Loud](https://www.tindie.com/product
 This repo has some tweaked files for how I've been using them with [sendspin](https://www.sendspin-audio.com/) and [Music Assistant](https://www.music-assistant.io/).
 I have set up the displays to show track information, and I use [IR remotes](https://www.aliexpress.com/item/1005006464481647.html) from AliExpress to control them.
 
+THIS VERSION REQUIRES ESPHOME-DEV.
+
 Tweaks:
 
 - Boosted CPU speed when displays are in operation

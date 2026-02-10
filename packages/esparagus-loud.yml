@@ -20,7 +20,7 @@ esphome:
   name: ${name}
   friendly_name: ${friendly_name}
   comment: Esparagus Loud
-  min_version: 2025.12.2
+  min_version: 2026.2.0-dev
   project:
     name: "sonocotta.esparagus_loud"
     version: "revE"
