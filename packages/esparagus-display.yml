@@ -13,7 +13,6 @@ api:
   on_client_connected: 
     then:
       - display.page.show: page_clock
-      - component.update: spi_display
 
 esp32:
   # override CPU freq
@@ -27,7 +26,7 @@ logger:
 spi:
   clk_pin: GPIO18
   mosi_pin: GPIO23
-  miso_pin: GPIO19
+  # miso not used in this protocol
   id: spi_bus_display
 
 time:
@@ -91,10 +90,8 @@ switch:
                   - display.page.show: page_clock
                 else:
                   - display.page.show: page_play
-            - component.update: spi_display
     turn_off_action:
       - display.page.show: page_off
-      - component.update: spi_display
 
 media_player:
   - platform: speaker_source
@@ -102,14 +99,12 @@ media_player:
 
     on_play:
       - display.page.show: page_play
-      - component.update: spi_display
       - switch.template.publish:
           id: switch_screen
           state: ON
 
     on_idle:
       - display.page.show: page_clock
-      - component.update: spi_display
 
 display:
   - platform: ssd1306_spi
@@ -122,7 +117,7 @@ display:
     dc_pin: ${display_dc}
     reset_pin: ${display_reset}
     update_interval: 200ms
-    data_rate: 20MHz
+    data_rate: 10MHz # T_cycle min is 100ns
     pages:
       - id: page_startup
         lambda: |-
