@@ -8,6 +8,7 @@
 # the main loop.  To combat that, this runs the CPU faster
 defaults:
   font_small: 14
+  display_model: SH1106 128x64
 
 api:
   on_client_connected: 
@@ -63,15 +64,45 @@ text_sensor:
   - platform: sendspin
     type: title
     id: ss_title
+    on_value:
+      - globals.set:
+          id: title_length
+          value: '0'
 
   - platform: sendspin
     type: artist
     id: ss_artist
+    on_value:
+      - globals.set:
+          id: artist_length
+          value: '0'
 
   - platform: sendspin
     type: album
     id: ss_album
+    on_value:
+      - globals.set:
+          id: album_length
+          value: '0'
 
+# We're caching pixel lengths of strings here, as it's unclear
+# how expensive those string calculations are every screen raster
+globals:
+  - id: title_length
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: artist_length
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: album_length
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+# Use this switch in HA to e.g. turn the screen off
+# when everyone's out, or at bedtime
 switch:
   - platform: template
     name: "Screen"
@@ -95,7 +126,10 @@ switch:
 
 media_player:
   - platform: speaker_source
-    id: !extend ${speaker_id}
+    id: !extend "${speaker_id}"
+
+    # Go back to the speaker_source and add automations
+    # to select the audio_playing page, or the clock
 
     on_play:
       - display.page.show: page_play
@@ -108,7 +142,7 @@ media_player:
 
 display:
   - platform: ssd1306_spi
-    model: SH1106 128x64
+    model: ${display_model}
     id: spi_display
     spi_id: spi_bus_display
     cs_pin: 
@@ -116,8 +150,12 @@ display:
       ignore_strapping_warning: true
     dc_pin: ${display_dc}
     reset_pin: ${display_reset}
-    update_interval: 200ms
+
+    # These two set how much time the ESP32 is running the display
+    # which takes time away from playing audio!
+    update_interval: 250ms
     data_rate: 10MHz # T_cycle min is 100ns
+
     pages:
       - id: page_startup
         lambda: |-
@@ -176,13 +214,17 @@ display:
                                   it.get_width(), 
                                   it.get_height()));
 
-          it.get_text_bounds(0, 0, 
-                            id(ss_title).state.c_str(), 
-                            id(text_small), 
-                            TextAlign::TOP_LEFT, 
-                            &x1, &y1, &new_w, &new_h);
-          if (new_w + PADDING_LEFT >= it.get_width()) {
-            auto missing_artist_text = new_w - it.get_width();
+          if (id(title_length) == 0) {
+            it.get_text_bounds(0, 0, 
+                              id(ss_title).state.c_str(), 
+                              id(text_small), 
+                              TextAlign::TOP_LEFT, 
+                              &x1, &y1, &new_w, &new_h);
+            id(title_length) = new_w;
+          }
+
+          if (id(title_length) + PADDING_LEFT >= it.get_width()) {
+            auto missing_artist_text = id(title_length) - it.get_width();
             increment = true;
             title_width_offset = PADDING_LEFT - (iteration % (missing_artist_text + PADDING_RIGHT));
           }
@@ -192,14 +234,17 @@ display:
                     id(ss_title).state.c_str());
 
           // Do this again for the artist
-          it.get_text_bounds(0, 0, 
-                            id(ss_artist).state.c_str(), 
-                            id(text_small), 
-                            TextAlign::TOP_LEFT, 
-                            &x1, &y1, &new_w, &new_h);
+          if (id(artist_length) == 0) {
+            it.get_text_bounds(0, 0, 
+                              id(ss_artist).state.c_str(), 
+                              id(text_small), 
+                              TextAlign::TOP_LEFT, 
+                              &x1, &y1, &new_w, &new_h);
+            id(artist_length) = new_w;
+          }
 
-          if (new_w + PADDING_LEFT >= it.get_width()) {
-            auto missing_title_text = new_w - it.get_width();
+          if (id(artist_length) + PADDING_LEFT >= it.get_width()) {
+            auto missing_title_text = id(artist_length) - it.get_width();
             increment = true;
             artist_width_offset = PADDING_LEFT - (iteration % (missing_title_text + PADDING_RIGHT));
           }
@@ -209,14 +254,17 @@ display:
                   id(ss_artist).state.c_str());
 
           // And the album
-          it.get_text_bounds(0, 0, 
-                            id(ss_album).state.c_str(), 
-                            id(text_small), 
-                            TextAlign::TOP_LEFT, 
-                            &x1, &y1, &new_w, &new_h);
+          if (id(album_length) == 0) {
+            it.get_text_bounds(0, 0, 
+                              id(ss_album).state.c_str(), 
+                              id(text_small), 
+                              TextAlign::TOP_LEFT, 
+                              &x1, &y1, &new_w, &new_h);
+            id(album_length) = new_w;
+          }
 
-          if (new_w + PADDING_LEFT >= it.get_width()) {
-            auto missing_album_text = new_w - it.get_width();
+          if (id(album_length) + PADDING_LEFT >= it.get_width()) {
+            auto missing_album_text = id(album_length) - it.get_width();
             increment = true;
             album_width_offset = PADDING_LEFT - (iteration % (missing_album_text + PADDING_RIGHT));
           }

@@ -1,8 +1,21 @@
 defaults:
-  task_stack_in_psram: "false" # important to disable this for non-S3 model
+  task_stack_in_psram: "false"
   log_level: INFO
   enable_display: false
   enable_debug: false
+  channel_mode: stereo
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Esparagus Loud
+  project:
+    name: "sonocotta.esparagus_loud"
+    version: "revE"
+  min_version: 2026.2.0
+  name_add_mac_suffix: false
+  platformio_options:
+    board_build.flash_mode: dio
 
 substitutions:
   pkg_display: !include
@@ -16,17 +29,6 @@ substitutions:
   pkg_debug: !include
     file: "./debug.yml"
 
-esphome:
-  name: ${name}
-  friendly_name: ${friendly_name}
-  comment: Esparagus Loud
-  min_version: 2026.2.0-dev
-  project:
-    name: "sonocotta.esparagus_loud"
-    version: "revE"
-  name_add_mac_suffix: false
-  platformio_options:
-    board_build.flash_mode: dio
 packages:
   base: !include
     file: "./esparagus.yml"
