@@ -1,0 +1,23 @@
+substitutions:
+  name: louder1
+  friendly_name: My New Esparagus Louder
+  destination_player: media_player.match_name
+
+packages:
+  louder: !include
+    file: "packages/esparagus-louder.yml"
+    vars:
+      log_level: INFO
+      enable_display: true
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "CHANGEME"
+
+ota:
+  - platform: esphome
+    password: "changeme"
+
+wifi:
+  # needs setting

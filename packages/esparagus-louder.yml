@@ -1,39 +1,15 @@
 defaults:
+  task_stack_in_psram: false
+  log_level: INFO
   enable_ethernet: false
   enable_display: false
-  task_stack_in_psram: false
-
-substitutions:
-
-  pkg_ethernet: !include
-    file: "./esparagus-louder-ethernet.yml"
-  pkg_display: !include
-    file: "./esparagus-display.yml"
-    vars:
-      display_cs: GPIO15
-      display_dc: GPIO04
-      display_reset: GPIO32
-      speaker_id: external_media_player
-
-packages:
-  base: !include
-    file: "./esparagus-dev.yml"
-    vars:
-      led_gpio_pin: 12
-
-  remote: !include
-    file: "./esparagus-remote.yml"
-    vars:
-      gpio_pin: 39
-      led_id: rgb_front_led
-
-  display: ${ pkg_display if enable_display else {} }
-  ethernet: ${ pkg_ethernet if enable_ethernet else {} }
+  enable_debug: false
+  channel_mode: stereo
 
 esphome:
   name: ${name}
-  comment: Esparagus Louder
   friendly_name: ${friendly_name}
+  comment: Esparagus Louder
   project:
     name: "sonocotta.esparagus_louder"
     version: "revG"
@@ -50,6 +26,34 @@ esphome:
         id: external_media_player
         media_url: file://startup_sync_sound
 
+substitutions:
+  pkg_ethernet: !include
+    file: "./esparagus-louder-ethernet.yml"
+  pkg_display: !include
+    file: "./esparagus-display.yml"
+    vars:
+      display_cs: GPIO15
+      display_dc: GPIO04
+      display_reset: GPIO32
+      speaker_id: external_media_player
+
+  pkg_debug: !include
+    file: "./debug.yml"
+
+packages:
+  base: !include
+    file: "./esparagus.yml"
+    vars:
+      led_gpio_pin: 12
+  remote: !include
+    file: "./esparagus-remote.yml"
+    vars:
+      gpio_pin: 39
+      led_id: rgb_front_led
+  display: ${ pkg_display if enable_display else {} }
+  debug: ${ pkg_debug if enable_debug else {} }
+  ethernet: ${ pkg_ethernet if enable_ethernet else {} }
+
 external_components:
   - source: github://mrtoy-me/esphome-tas5805m@beta
     components: [ tas5805m ]
@@ -57,7 +61,7 @@ external_components:
 
 esp32:
   board: mhetesp32minikit
-  flash_size: 16MB # louder
+  flash_size: 16MB # louder has more flash
 
 network:
   enable_ipv6: true
@@ -108,7 +112,7 @@ speaker:
     # TODO check if this can this be lowered
     bits_per_sample: 32bit
     dac_type: external
-    channel: stereo
+    channel: ${channel_mode}
     timeout: never
     mclk_multiple: 512
     use_apll: true
@@ -144,6 +148,8 @@ media_player:
 
   - platform: speaker_source
     id: external_media_player
+    volume_increment: 2%
+    volume_initial: 25%
     name: Media Player
     announcement_speaker: announcement_resampling_speaker
     media_speaker: media_resampling_speaker
@@ -155,7 +161,6 @@ media_player:
       format: FLAC     # FLAC is the least processor intensive codec
       num_channels: 2
       sample_rate: 48000
-    volume_increment: 0.02
     sources:
       - file_source
       - http_source
