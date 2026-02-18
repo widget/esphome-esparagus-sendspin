@@ -44,7 +44,7 @@ font:
       - "\U000fffd8" # music notes
   - file:
       type: gfonts
-      family: Ubuntu # TODO try 'Jersey 10 Charted'
+      family: Ubuntu
       weight: regular
     id: text_small
     size: ${font_small}
@@ -114,6 +114,7 @@ switch:
           condition:
             api.connected:
           then:
+            - component.resume: spi_display
             - if:
                 condition:
                   media_player.is_idle: ${speaker_id}
@@ -123,6 +124,35 @@ switch:
                   - display.page.show: page_play
     turn_off_action:
       - display.page.show: page_off
+      - delay: 0.5s # so that the above takes effect
+      - component.suspend: spi_display
+
+script:
+  - id: page_play_with_delay
+    mode: restart
+    then:
+      # This is basically to give sendspin more CPU to start the stream
+      - component.suspend: spi_display
+      - delay: 2s
+      - component.resume: spi_display
+      - if:
+          condition:
+            # if we are STILL playing
+            media_player.is_playing: "${speaker_id}"
+          then:
+            - display.page.show: page_play
+            - switch.template.publish:
+                id: switch_screen
+                state: ON
+  - id: page_clock_with_delay
+    mode: restart
+    then:
+      - delay: 1s
+      - if:
+          condition:
+            media_player.is_idle: "${speaker_id}"
+          then:
+            - display.page.show: page_clock
 
 media_player:
   - platform: speaker_source
@@ -132,13 +162,9 @@ media_player:
     # to select the audio_playing page, or the clock
 
     on_play:
-      - display.page.show: page_play
-      - switch.template.publish:
-          id: switch_screen
-          state: ON
-
+      - script.execute: page_play_with_delay
     on_idle:
-      - display.page.show: page_clock
+      - script.execute: page_clock_with_delay
 
 display:
   - platform: ssd1306_spi
@@ -153,7 +179,7 @@ display:
 
     # These two set how much time the ESP32 is running the display
     # which takes time away from playing audio!
-    update_interval: 250ms
+    update_interval: 330ms
     data_rate: 10MHz # T_cycle min is 100ns
 
     pages:
