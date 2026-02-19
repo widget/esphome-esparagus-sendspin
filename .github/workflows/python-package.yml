@@ -23,7 +23,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip' # caching pip dependencies
-        pip-install: ./requirements.txt
+        pip-install: -r requirements.txt
     - name: Test ESPhome validation
       # Errors are on stderr, 1 returned on any failure
       run: |
