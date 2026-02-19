@@ -17,15 +17,17 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip' # caching pip dependencies
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U esphome
+        python -m pip install esphome
     - name: Test ESPhome validation
+      # Errors are on stderr, 1 returned on any failure
       run: |
-        esphome config example-loud*
+        esphome config example-loud* >/dev/null
