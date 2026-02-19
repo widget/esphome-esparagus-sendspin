@@ -5,8 +5,7 @@ I've been playing a lot with the Sonocotta [Loud](https://www.tindie.com/product
 This repo has some tweaked files for how I've been using them with [sendspin](https://www.sendspin-audio.com/) and [Music Assistant](https://www.music-assistant.io/).
 I have set up the displays to show track information, and I use [IR remotes](https://www.aliexpress.com/item/1005006464481647.html) from AliExpress to control them.
 
-THIS VERSION REQUIRES **ESPHOME-DEV**.
-It also requires PR 12126 for _disabling_ the display, as there's a bug in how an optional package that extends a YAML node is (not) included.
+This also requires PR 12126 for _disabling_ the display, as there's a bug in how an optional package that extends a YAML node is (not) included.
 Or remove the `pkg_display` node if you're not using it.
 
 Tweaks:

@@ -34,11 +34,6 @@ packages:
     file: "./esparagus.yml"
     vars:
       led_gpio_pin: 33
-  remote: !include
-    file: "./esparagus-remote.yml"
-    vars:
-      gpio_pin: 39
-      led_id: rgb_front_led
   display: ${ pkg_display if enable_display else {} }
   debug: ${ pkg_debug if enable_debug else {} }
 

@@ -6,15 +6,23 @@ substitutions:
 packages:
   loud: !include
     file: "packages/esparagus-loud.yml"
+    vars:
+      enable_display: true
+  # This would need adjusting to your own remote codes
+  remote: !include
+    file: "./example-esparagus-remote.yml"
+    vars:
+      gpio_pin: 39
+      led_id: rgb_front_led
 
 # Enable Home Assistant API
 api:
   encryption:
-    key: "CHANGEME"
+    key: "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE="
 
 ota:
   - platform: esphome
-    password: "changeme"
+    password: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 wifi:
-  # needs setting
+  ssid: example
